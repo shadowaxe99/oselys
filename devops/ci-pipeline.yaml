@@ -1,0 +1,73 @@
+```yaml
+name: CI Pipeline
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - name: Set up Node.js
+      uses: actions/setup-node@v2
+      with:
+        node-version: '14'
+    - name: Install Dependencies
+      run: npm install
+    - name: Run Linter
+      run: npm run lint
+    - name: Run Unit Tests
+      run: npm run test:unit
+    - name: Build
+      run: npm run build
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - name: Set up Docker
+      uses: docker/setup-buildx-action@v1
+    - name: Login to DockerHub
+      uses: docker/login-action@v1
+      with:
+        username: ${{ secrets.DOCKERHUB_USERNAME }}
+        password: ${{ secrets.DOCKERHUB_TOKEN }}
+    - name: Build and push Docker image
+      uses: docker/build-push-action@v2
+      with:
+        context: .
+        file: ./devops/docker/Dockerfile
+        push: true
+        tags: user/appname:latest
+    - name: Deploy to Kubernetes
+      run: |
+        kubectl apply -f ./devops/kubernetes/deployment.yaml
+        kubectl apply -f ./devops/kubernetes/service.yaml
+      env:
+        KUBE_CONFIG_DATA: ${{ secrets.KUBE_CONFIG_DATA }}
+
+  documentation:
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+    - uses: actions/checkout@v2
+    - name: Generate API Documentation
+      run: npm run docs:api
+    - name: Generate Developer Guide
+      run: npm run docs:dev
+    - name: Generate User Manual
+      run: npm run docs:user
+    - name: Archive Documentation
+      uses: actions/upload-artifact@v2
+      with:
+        name: documentation
+        path: |
+          docs/api_documentation.md
+          docs/developer_guide.md
+          docs/user_manual.md
+```
