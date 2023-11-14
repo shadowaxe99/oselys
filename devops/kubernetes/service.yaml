@@ -1,0 +1,20 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: elysium-os-service
+  labels:
+    app: elysium-os
+spec:
+  type: LoadBalancer
+  ports:
+    - port: 80
+      targetPort: 8080
+      protocol: TCP
+      name: http
+    - port: 443
+      targetPort: 8443
+      protocol: TCP
+      name: https
+  selector:
+    app: elysium-os
+    tier: frontend

@@ -1,0 +1,58 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: elysium-os-deployment
+  labels:
+    app: elysium-os
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: elysium-os
+  template:
+    metadata:
+      labels:
+        app: elysium-os
+    spec:
+      containers:
+      - name: elysium-os-frontend
+        image: elysium-os-frontend:latest
+        ports:
+        - containerPort: 80
+      - name: elysium-os-backend
+        image: elysium-os-backend:latest
+        ports:
+        - containerPort: 3000
+      - name: elysium-os-ai-nlp
+        image: elysium-os-ai-nlp:latest
+        ports:
+        - containerPort: 5000
+      - name: elysium-os-blockchain
+        image: elysium-os-blockchain:latest
+        ports:
+        - containerPort: 8545
+      volumes:
+      - name: shared-data
+        persistentVolumeClaim:
+          claimName: elysium-os-pvc
+      initContainers:
+      - name: init-db
+        image: mongo:latest
+        command: ['sh', '-c', 'until nslookup elysium-os-db; do echo waiting for db; sleep 2; done;']
+      - name: init-redis
+        image: redis:latest
+        command: ['sh', '-c', 'until nslookup elysium-os-cache; do echo waiting for cache; sleep 2; done;']
+      services:
+      - name: elysium-os-db
+        image: mongo:latest
+        ports:
+        - containerPort: 27017
+      - name: elysium-os-cache
+        image: redis:latest
+        ports:
+        - containerPort: 6379
+      serviceAccountName: elysium-os-service-account
+      imagePullSecrets:
+      - name: regcred
+      nodeSelector:
+        "beta.kubernetes.io/os": linux
